@@ -95,6 +95,44 @@ Status SeluGradHelper(const Scope& scope, const Operation& op,
 }
 REGISTER_GRADIENT_OP("Selu", SeluGradHelper);
 
+Status Conv2DGrad(const Scope& scope, const Operation& op,
+                  const std::vector<Output>& grad_inputs,
+                  std::vector<Output>* grad_outputs) {
+  string data_format;
+  string padding;
+  std::vector<int32> strides;
+  bool use_cudnn_on_gpu;
+  
+  auto attrs = op.output(0).node()->attrs();
+  
+  GetNodeAttr(attrs, "data_format", &data_format);
+  GetNodeAttr(attrs, "padding", &padding);
+  GetNodeAttr(attrs, "strides", &strides);
+  GetNodeAttr(attrs, "use_cudnn_on_gpu", &use_cudnn_on_gpu);
+
+  Conv2DBackpropInput::Attrs input_attrs;
+  input_attrs.DataFormat(data_format);
+  input_attrs.UseCudnnOnGpu(use_cudnn_on_gpu);
+  
+  auto dx_1 = Conv2DBackpropInput(scope, Shape(scope, op.input(0)),
+                                  op.input(1), grad_inputs[0],
+                                  strides, padding, input_attrs);
+  grad_outputs->push_back(dx_1);
+
+  Conv2DBackpropFilter::Attrs filter_attrs;
+  filter_attrs.DataFormat(data_format);
+  filter_attrs.UseCudnnOnGpu(use_cudnn_on_gpu);
+    
+  auto dx_2 = Conv2DBackpropFilter(scope, op.input(0),
+                                   Shape(scope, op.input(1)), grad_inputs[0],
+                                   strides, padding, filter_attrs);
+  grad_outputs->push_back(dx_2);
+              
+  return scope.status();
+}
+REGISTER_GRADIENT_OP("Conv2D", Conv2DGrad);
+
+  
 }  // anonymous namespace
 }  // namespace ops
 }  // namespace tensorflow

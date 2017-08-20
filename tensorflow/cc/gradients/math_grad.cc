@@ -77,19 +77,52 @@ Output ReducedShape(const Scope& scope,
   std::initializer_list<Input> ds2{input_shape_i, Fill(scope, axes_shape, 1)};
   return DynamicStitch(scope, ds1, ds2);                    
 }
+
+Output ReductionDims(const Scope& scope,
+                     const Input& x) {
+  return Range(scope, 0, Rank(scope, x), 1);
+}
   
-Status SumGrad(const Scope& scope, const Operation& op,
-               const std::vector<Output>& grad_inputs,
-               std::vector<Output>* grad_outputs) {
+Output ReduceProd(const Scope& scope,
+                  const Input& x) {
+  return Prod(scope, x, ReductionDims(scope, x));
+}
+  
+Output SumGradHelper(const Scope& scope, const Operation& op,
+                     const std::vector<Output>& grad_inputs){
   auto input_shape = Shape(scope, op.input(0));
   auto output_shape_kept_dims = ReducedShape(scope, input_shape, op.input(1));
   auto tile_scaling = SafeShapeDiv(scope, input_shape, output_shape_kept_dims);
   auto grad = Reshape(scope, grad_inputs[0], output_shape_kept_dims);
-  grad_outputs->push_back(Tile(scope, grad, tile_scaling));
+  return Tile(scope, grad, tile_scaling);
+}
+  
+Status SumGrad(const Scope& scope, const Operation& op,
+               const std::vector<Output>& grad_inputs,
+               std::vector<Output>* grad_outputs) {
+  auto grad = SumGradHelper(scope, op, grad_inputs);
+  grad_outputs->push_back(grad);
   grad_outputs->push_back(NoGradient());
   return scope.status();
 }
 REGISTER_GRADIENT_OP("Sum", SumGrad);
+  
+Status MeanGrad(const Scope& scope, const Operation& op,
+               const std::vector<Output>& grad_inputs,
+               std::vector<Output>* grad_outputs) {
+  auto sum_grad = SumGradHelper(scope, op, grad_inputs);
+  auto input_shape = Shape(scope, op.input(0));
+  auto output_shape = Shape(scope, op.output(0));
+  auto factor = SafeShapeDiv(scope,
+                             ReduceProd(scope, input_shape),
+                             ReduceProd(scope, output_shape));
+  auto grad = RealDiv(scope, sum_grad,
+                      Cast(scope, factor, sum_grad.type()));
+  grad_outputs->push_back(grad);
+  grad_outputs->push_back(NoGradient());
+  return scope.status();
+}
+REGISTER_GRADIENT_OP("Mean", MeanGrad);
 
 Status AbsGrad(const Scope& scope, const Operation& op,
                const std::vector<Output>& grad_inputs,

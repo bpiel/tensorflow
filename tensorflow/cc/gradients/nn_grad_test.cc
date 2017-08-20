@@ -116,13 +116,10 @@ TEST_F(NNGradTest, SeluGrad) {
 TEST_F(NNGradTest, Conv2DGrad) {
   TensorShape shape({1, 2, 2, 1});
   auto x = Placeholder(scope_, DT_FLOAT, Placeholder::Shape(shape));
-  Tensor filter = test::AsTensor<float>({1.0}, {1, 1, 1, 1});
+  Tensor filter = test::AsTensor<float>({0.5}, {1, 1, 1, 1});
   const std::vector<int> strides{1, 1, 1, 1};
   auto y = Conv2D(scope_, x, filter, strides, "SAME");
-  Tensor x_init_value = test::AsTensor<float>(
-      {-0.9f, -0.5f, -0.1f, 0.5f},
-    {1, 2, 2, 1});
-  RunTest(x, x_init_value, y, shape);
+  RunTest(x, shape, y, shape);
 }
 
 }  // namespace

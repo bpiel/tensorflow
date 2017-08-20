@@ -122,6 +122,15 @@ TEST_F(NNGradTest, Conv2DGrad) {
   RunTest(x, shape, y, shape);
 }
 
+TEST_F(NNGradTest, MaxPoolGradHelper) {
+  TensorShape shape({1, 2, 2, 1});
+  auto x = Placeholder(scope_, DT_FLOAT, Placeholder::Shape(shape));
+  const std::vector<int> ksize{1, 2, 2, 1};
+  const std::vector<int> strides{1, 1, 1, 1};
+  auto y = MaxPool(scope_, x, ksize, strides, "SAME");
+  RunTest(x, shape, y, shape);
+}
+  
 TEST_F(NNGradTest, BiasAddGradHelper) {
   TensorShape shape({3, 2, 5});
   auto x = Placeholder(scope_, DT_FLOAT, Placeholder::Shape(shape));

@@ -149,6 +149,31 @@ Status BiasAddGradHelper(const Scope& scope, const Operation& op,
 }
 REGISTER_GRADIENT_OP("BiasAdd", BiasAddGradHelper);
 
+Status MaxPoolGradHelper(const Scope& scope, const Operation& op,
+                         const std::vector<Output>& grad_inputs,
+                         std::vector<Output>* grad_outputs) {
+  string data_format;
+  string padding;
+  std::vector<int32> strides;
+  std::vector<int32> ksize;
+  
+  auto attrs = op.output(0).node()->attrs();
+  
+  GetNodeAttr(attrs, "data_format", &data_format);
+  GetNodeAttr(attrs, "ksize", &ksize);
+  GetNodeAttr(attrs, "padding", &padding);
+  GetNodeAttr(attrs, "strides", &strides);
+
+  auto dx = internal::MaxPoolGrad(scope, op.input(0),
+                                  op.output(0),
+                                  grad_inputs[0],
+                                  ksize, strides, padding);
+  grad_outputs->push_back(dx);
+  return scope.status();
+  
+}
+REGISTER_GRADIENT_OP("MaxPool", MaxPoolGradHelper);
+
   
 }  // anonymous namespace
 }  // namespace ops

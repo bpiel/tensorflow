@@ -132,6 +132,23 @@ Status Conv2DGrad(const Scope& scope, const Operation& op,
 }
 REGISTER_GRADIENT_OP("Conv2D", Conv2DGrad);
 
+Status BiasAddGradHelper(const Scope& scope, const Operation& op,
+                  const std::vector<Output>& grad_inputs,
+                  std::vector<Output>* grad_outputs) {
+  string data_format;
+  GetNodeAttr(op.output(0).node()->attrs(), "data_format", &data_format);
+
+  BiasAddGrad::Attrs input_attrs;
+  input_attrs.DataFormat(data_format);
+  
+  auto dx_1 = BiasAddGrad(scope, grad_inputs[0], input_attrs);
+  grad_outputs->push_back(Identity(scope, grad_inputs[0]));
+  grad_outputs->push_back(dx_1);
+              
+  return scope.status();
+}
+REGISTER_GRADIENT_OP("BiasAdd", BiasAddGradHelper);
+
   
 }  // anonymous namespace
 }  // namespace ops

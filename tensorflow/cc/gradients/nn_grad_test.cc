@@ -116,11 +116,21 @@ TEST_F(NNGradTest, SeluGrad) {
 TEST_F(NNGradTest, Conv2DGrad) {
   TensorShape shape({1, 2, 2, 1});
   auto x = Placeholder(scope_, DT_FLOAT, Placeholder::Shape(shape));
-  Tensor filter = test::AsTensor<float>({0.5}, {1, 1, 1, 1});
+  Tensor filter = test::AsTensor<float>({0.5f}, {1, 1, 1, 1});
   const std::vector<int> strides{1, 1, 1, 1};
   auto y = Conv2D(scope_, x, filter, strides, "SAME");
   RunTest(x, shape, y, shape);
 }
 
+TEST_F(NNGradTest, BiasAddGradHelper) {
+  TensorShape shape({3, 2, 5});
+  auto x = Placeholder(scope_, DT_FLOAT, Placeholder::Shape(shape));
+  Tensor bias  = test::AsTensor<float>(
+    {-0.9f, -0.5f, 0.1f, 0.3f, 0.5f},
+    {5});                                        
+  auto y = BiasAdd(scope_, x, bias);
+  RunTest(x, shape, y, shape);
+}
+  
 }  // namespace
 }  // namespace tensorflow

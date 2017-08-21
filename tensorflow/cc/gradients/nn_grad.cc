@@ -95,7 +95,6 @@ Status SeluGradHelper(const Scope& scope, const Operation& op,
 }
 REGISTER_GRADIENT_OP("Selu", SeluGradHelper);
 
-
 Status Conv2DGrad(const Scope& scope, const Operation& op,
                   const std::vector<Output>& grad_inputs,
                   std::vector<Output>* grad_outputs) {
@@ -171,6 +170,15 @@ Status MaxPoolGradHelper(const Scope& scope, const Operation& op,
   
 }
 REGISTER_GRADIENT_OP("MaxPool", MaxPoolGradHelper);
+
+Status L2LossGrad(const Scope& scope, const Operation& op,
+                  const std::vector<Output>& grad_inputs,
+                  std::vector<Output>* grad_outputs) {
+  grad_outputs->push_back(Mul(scope, op.input(0), grad_inputs[0]));
+  return scope.status();
+}
+REGISTER_GRADIENT_OP("L2Loss", L2LossGrad);
+
 
 }  // anonymous namespace
 }  // namespace ops

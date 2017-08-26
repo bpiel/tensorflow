@@ -122,7 +122,6 @@ TEST_F(NNGradTest, SeluGrad) {
   RunTest(x, x_init_value, y, shape);
 }
 
-<<<<<<< HEAD
 TEST_F(NNGradTest, Conv2DGrad) {
   TensorShape shape({1, 2, 2, 1});
   auto x = Placeholder(scope_, DT_FLOAT, Placeholder::Shape(shape));
@@ -142,17 +141,6 @@ TEST_F(NNGradTest, MaxPoolGradHelper) {
 }
   
 TEST_F(NNGradTest, BiasAddGradHelper) {
-  TensorShape shape({3, 2, 5});
-  auto x = Placeholder(scope_, DT_FLOAT, Placeholder::Shape(shape));
-  Tensor bias  = test::AsTensor<float>(
-    {-0.9f, -0.5f, 0.1f, 0.3f, 0.5f},
-    {5});                                        
-  auto y = BiasAdd(scope_, x, bias);
-  RunTest(x, shape, y, shape);
-}
-  
-=======
-TEST_F(NNGradTest, BiasAddGradHelper) {
   TensorShape shape({4, 5});
   TensorShape bias_shape({5});
   auto x = Placeholder(scope_, DT_FLOAT, Placeholder::Shape(shape));
@@ -161,6 +149,5 @@ TEST_F(NNGradTest, BiasAddGradHelper) {
   RunTest({x,bias}, {shape, bias_shape}, {y}, {shape});
 }
 
->>>>>>> origin/master
 }  // namespace
 }  // namespace tensorflow

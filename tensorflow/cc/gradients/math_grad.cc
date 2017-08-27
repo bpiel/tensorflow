@@ -14,6 +14,7 @@ limitations under the License.
 ==============================================================================*/
 
 #include "tensorflow/cc/ops/array_ops_internal.h"
+#include "tensorflow/cc/ops/math_ops_internal.h"
 #include "tensorflow/cc/ops/standard_ops.h"
 
 #include "tensorflow/cc/framework/grad_op_registry.h"
@@ -145,11 +146,9 @@ REGISTER_GRADIENT_OP("Neg", NegGrad);
 Status InvGrad(const Scope& scope, const Operation& op,
                const std::vector<Output>& grad_inputs,
                std::vector<Output>* grad_outputs) {
-  // dy/dx = -1/x^2 = -y^2
-  auto dydx = Neg(scope, Square(scope, op.output(0)));
-  // grad(x) = grad(y) * conj(dy/dx)
+  // Use the built-in operator.
   grad_outputs->push_back(
-      Mul(scope, grad_inputs[0], ConjugateHelper(scope, dydx)));
+      internal::ReciprocalGrad(scope, op.output(0), grad_inputs[0]));
   return scope.status();
 }
 REGISTER_GRADIENT_OP("Inv", InvGrad);
@@ -171,14 +170,9 @@ REGISTER_GRADIENT_OP("Square", SquareGrad);
 Status SqrtGrad(const Scope& scope, const Operation& op,
                 const std::vector<Output>& grad_inputs,
                 std::vector<Output>* grad_outputs) {
-  // y = sqrt(x)
-  // dy/dx =  0.5 * (1 / sqrt(x)) = 0.5 * (1 / y)
-  auto y_inv = Reciprocal(scope, op.output(0));
-  auto half = Cast(scope, Const(scope, 0.5), op.input(0).type());
-  auto dydx = Mul(scope, half, y_inv);
-  // grad(x) = grad(y) * conj(dy/dx)
+  // Use the built-in operator.
   grad_outputs->push_back(
-      Mul(scope, grad_inputs[0], ConjugateHelper(scope, dydx)));
+      internal::SqrtGrad(scope, op.output(0), grad_inputs[0]));
   return scope.status();
 }
 REGISTER_GRADIENT_OP("Sqrt", SqrtGrad);
@@ -186,16 +180,9 @@ REGISTER_GRADIENT_OP("Sqrt", SqrtGrad);
 Status RsqrtGrad(const Scope& scope, const Operation& op,
                  const std::vector<Output>& grad_inputs,
                  std::vector<Output>* grad_outputs) {
-  // y = 1/x^1/2 = x^-1/2
-  // dy/dx = -1/2 * x^-3/2 = -1/2 * x^-1/2 * x^-1 = -1/2 * y * x^-1
-  auto x_inv = Reciprocal(scope, op.input(0));
-  auto y = op.output(0);
-  auto neghalf = Cast(scope, Const(scope, -0.5), op.input(0).type());
-  auto a = Mul(scope, neghalf, x_inv);
-  auto dydx = Mul(scope, a, y);
-  // grad(x) = grad(y) * conj(dy/dx)
+  // Use the built-in operator.
   grad_outputs->push_back(
-      Mul(scope, grad_inputs[0], ConjugateHelper(scope, dydx)));
+      internal::RsqrtGrad(scope, op.output(0), grad_inputs[0]));
   return scope.status();
 }
 REGISTER_GRADIENT_OP("Rsqrt", RsqrtGrad);
@@ -281,14 +268,15 @@ REGISTER_GRADIENT_OP("Cosh", CoshGrad);
 Status TanhGrad(const Scope& scope, const Operation& op,
                 const std::vector<Output>& grad_inputs,
                 std::vector<Output>* grad_outputs) {
-  // y = tanh(x)
-  // dy/dx = 1 - (tanh(x))^2 = 1 - y^2
-  auto y2 = Square(scope, op.output(0));
-  auto one = Cast(scope, Const(scope, 1.0), op.input(0).type());
-  auto dydx = Sub(scope, one, y2);
-  // grad(x) = grad(y) * conj(dy/dx)
-  grad_outputs->push_back(
-      Mul(scope, grad_inputs[0], ConjugateHelper(scope, dydx)));
+  // Use the built-in operator.
+  // Note that the built-in operator does not return the conjugate of
+  // the gradient.
+  auto grad = grad_inputs[0];
+  // Optimization to avoid calculating conj(y) until the gradient is
+  // evaluated.
+  Scope grad_scope = scope.WithControlDependencies(grad);
+  auto y = ConjugateHelper(grad_scope, op.output(0));
+  grad_outputs->push_back(internal::TanhGrad(scope, y, grad));
   return scope.status();
 }
 REGISTER_GRADIENT_OP("Tanh", TanhGrad);
@@ -336,15 +324,15 @@ REGISTER_GRADIENT_OP("Atanh", AtanhGrad);
 Status SigmoidGrad(const Scope& scope, const Operation& op,
                    const std::vector<Output>& grad_inputs,
                    std::vector<Output>* grad_outputs) {
-  // y = 1 / (1 + exp(-x))
-  // dy/dx = y * (1 - y)
-  auto y = op.output(0);
-  auto one = Cast(scope, Const(scope, 1.0), op.input(0).type());
-  auto dydx = Mul(scope, y, Sub(scope, one, y));
-  // dx = dy * y * (1 - y)
-  // grad(x) = grad(y) * conj(dy/dx)
-  grad_outputs->push_back(
-      Mul(scope, grad_inputs[0], ConjugateHelper(scope, dydx)));
+  // Use the built-in operator.
+  // Note that the built-in operator does not return the conjugate of
+  // the gradient.
+  auto grad = grad_inputs[0];
+  // Optimization to avoid calculating conj(y) until the gradient is
+  // evaluated.
+  Scope grad_scope = scope.WithControlDependencies(grad);
+  auto y = ConjugateHelper(grad_scope, op.output(0));
+  grad_outputs->push_back(internal::SigmoidGrad(scope, y, grad));
   return scope.status();
 }
 REGISTER_GRADIENT_OP("Sigmoid", SigmoidGrad);
@@ -450,7 +438,7 @@ Status BinaryGradCommon(const Scope& scope, const Operation& op,
                         const Output& gx_2) {
   auto sx_1 = Shape(scope, op.input(0));
   auto sx_2 = Shape(scope, op.input(1));
-  auto rx = ops::internal::BroadcastGradientArgs(scope, sx_1, sx_2);
+  auto rx = internal::BroadcastGradientArgs(scope, sx_1, sx_2);
   auto dx_1 = Reshape(scope, Sum(scope, gx_1, rx.r0), sx_1);
   auto dx_2 = Reshape(scope, Sum(scope, gx_2, rx.r1), sx_2);
   grad_outputs->push_back(dx_1);
@@ -626,7 +614,7 @@ Status AngleGrad(const Scope& scope, const Operation& op,
   auto grad = Complex(scope, grad_inputs[0], zero);
   auto dx = Neg(scope, Mul(scope, grad, z_inv));
   grad_outputs->push_back(dx);
-  return scope.status(); 
+  return scope.status();
 }
 REGISTER_GRADIENT_OP("Angle", AngleGrad);
 

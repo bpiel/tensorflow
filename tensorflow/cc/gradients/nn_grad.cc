@@ -137,7 +137,12 @@ Status BiasAddGradHelper(const Scope& scope, const Operation& op,
                          std::vector<Output>* grad_outputs) {
   string data_format;
   BiasAddGrad::Attrs input_attrs;
+<<<<<<< HEAD
   GetNodeAttr(op.output(0).node()->attrs(), "data_format", &data_format);
+=======
+  TF_RETURN_IF_ERROR(
+      GetNodeAttr(op.output(0).node()->attrs(), "data_format", &data_format));
+>>>>>>> origin/nn_grads
   input_attrs.DataFormat(data_format);
   auto dx_1 = BiasAddGrad(scope, grad_inputs[0], input_attrs);
   grad_outputs->push_back(Identity(scope, grad_inputs[0]));
@@ -171,6 +176,7 @@ Status MaxPoolGradHelper(const Scope& scope, const Operation& op,
 }
 REGISTER_GRADIENT_OP("MaxPool", MaxPoolGradHelper);
 
+<<<<<<< HEAD
 Status L2LossGrad(const Scope& scope, const Operation& op,
                   const std::vector<Output>& grad_inputs,
                   std::vector<Output>* grad_outputs) {
@@ -180,6 +186,8 @@ Status L2LossGrad(const Scope& scope, const Operation& op,
 REGISTER_GRADIENT_OP("L2Loss", L2LossGrad);
 
 
+=======
+>>>>>>> origin/nn_grads
 }  // anonymous namespace
 }  // namespace ops
 }  // namespace tensorflow

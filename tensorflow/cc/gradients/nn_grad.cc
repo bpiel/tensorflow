@@ -95,7 +95,11 @@ Status SeluGradHelper(const Scope& scope, const Operation& op,
 }
 REGISTER_GRADIENT_OP("Selu", SeluGradHelper);
 
+<<<<<<< HEAD
 Status Conv2DGrad(const Scope& scope, const Operation& op,
+=======
+Status L2LossGrad(const Scope& scope, const Operation& op,
+>>>>>>> origin/l2lossgrad
                   const std::vector<Output>& grad_inputs,
                   std::vector<Output>* grad_outputs) {
   string data_format;
@@ -130,7 +134,11 @@ Status Conv2DGrad(const Scope& scope, const Operation& op,
               
   return scope.status();
 }
+<<<<<<< HEAD
 REGISTER_GRADIENT_OP("Conv2D", Conv2DGrad);
+=======
+REGISTER_GRADIENT_OP("L2Loss", L2LossGrad);
+>>>>>>> origin/l2lossgrad
 
 Status BiasAddGradHelper(const Scope& scope, const Operation& op,
                          const std::vector<Output>& grad_inputs,

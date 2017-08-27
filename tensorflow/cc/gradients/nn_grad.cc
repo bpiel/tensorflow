@@ -182,6 +182,26 @@ Status L2LossGrad(const Scope& scope, const Operation& op,
 }
 REGISTER_GRADIENT_OP("L2Loss", L2LossGrad);
 
+
+Output BroadcastMul(const Scope& scope,
+                    const Input& vec,
+                    const Input& mat) {
+  return Mul(scope,
+             ExpandDims(scope, vec, -1),
+             mat);
+}
+
+Status SoftmaxCrossEntropyWithLogitsGrad(const Scope& scope, const Operation& op,
+                                         const std::vector<Output>& grad_inputs,
+                                         std::vector<Output>* grad_outputs) {
+  // TODO(bpiel): path for grad_outputs != 0
+  auto grad = BroadcastMul(scope, grad_inputs[0], op.output(1));
+  grad_outputs->push_back(grad);
+  return scope.status();
+}
+REGISTER_GRADIENT_OP("SoftmaxCrossEntropyWithLogits",
+                     SoftmaxCrossEntropyWithLogitsGrad);
+
 }  // anonymous namespace
 }  // namespace ops
 }  // namespace tensorflow

@@ -139,7 +139,7 @@ TEST_F(NNGradTest, MaxPoolGradHelper) {
   auto y = MaxPool(scope_, x, ksize, strides, "SAME");
   RunTest(x, shape, y, shape);
 }
-    
+
 TEST_F(NNGradTest, L2LossGrad) {
   TensorShape x_shape({5, 2});
   TensorShape y_shape({1});

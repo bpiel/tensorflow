@@ -191,5 +191,13 @@ TEST_F(NNGradTest, MaxPoolGradV2Helper) {
   RunTest(x, x_init_value, y, y_shape);
 }
 
+TEST_F(NNGradTest, LRNGradHelper){
+  TensorShape x_shape({2, 2, 2, 2});
+  TensorShape y_shape({2, 2, 2, 2});
+  auto x = Placeholder(scope_, DT_FLOAT, Placeholder::Shape(x_shape));
+  auto y = LRN(scope_, x);
+  RunTest(x, x_shape, y, y_shape);
+}
+
 }  // namespace
 }  // namespace tensorflow
